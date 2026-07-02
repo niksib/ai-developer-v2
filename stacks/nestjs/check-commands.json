@@ -1,13 +1,29 @@
 {
   "lint": "npm run lint",
-  "typecheck": "npx tsc --noEmit",
+  "typecheck": "npx --no-install tsc --noEmit",
   "build": "npm run build",
   "test": "npm test",
+  "testAffected": null,
   "coverage": null,
-  "_comment": "Set \"coverage\" to e.g. \"npm run test:cov\" to enforce a coverage threshold (configure jest coverageThreshold). Leave null until configured — the diff-aware testGlobs gate below already enforces that tests exist. Business logic (actions/services) must be tested; pure structure (modules/dtos/entities) is exempt.",
+  "_comment": "Set \"coverage\" to e.g. \"npm run test:cov\" to enforce a coverage threshold (configure jest coverageThreshold). Leave null until configured \u2014 the diff-aware testGlobs gate below already enforces that tests exist. Business logic (actions/services) must be tested; pure structure (modules/dtos/entities) is exempt.",
   "testGlobs": {
-    "source": ["src/**/*.ts"],
-    "test": ["**/*.spec.ts", "**/*.e2e-spec.ts", "test/**/*.ts"],
-    "ignore": ["**/*.module.ts", "**/main.ts", "**/*.dto.ts", "**/*.entity.ts", "**/*.interface.ts", "**/migrations/**", "**/*.config.ts"]
-  }
+    "source": [
+      "src/**/*.ts"
+    ],
+    "test": [
+      "**/*.spec.ts",
+      "**/*.e2e-spec.ts",
+      "test/**/*.ts"
+    ],
+    "ignore": [
+      "**/*.module.ts",
+      "**/main.ts",
+      "**/*.dto.ts",
+      "**/*.entity.ts",
+      "**/*.interface.ts",
+      "**/migrations/**",
+      "**/*.config.ts"
+    ]
+  },
+  "_affectedComment": "S-tier fast lane: set to e.g. \"npx --no-install jest --onlyChanged\" once you trust its change detection. null = S runs the full \"test\" command (fail-safe)."
 }

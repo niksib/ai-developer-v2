@@ -11,7 +11,7 @@ You run in your own context window. The implementer delegates to you precisely s
 
 ## Rubric grading (when a rubric is provided)
 
-When you are given a `rubric.md` (a list of acceptance criteria) along with the diff, your FIRST job is to grade it:
+When you are given a `rubric.md` — or, on the M route, the **Definition of Done checklist in `spec.md`**, which serves as the rubric — along with the diff, your FIRST job is to grade it:
 
 1. Read every criterion line.
 2. For each one, verify it against the actual diff and the tests — not against claims. A criterion that says "covered by test X" is PASS only if test X exists, runs, and actually asserts that behavior.
@@ -19,6 +19,17 @@ When you are given a `rubric.md` (a list of acceptance criteria) along with the 
 4. Be conservative: when in doubt, FAIL. A false PASS ships a broken feature; a false FAIL just costs one more revision.
 
 Return the rubric grading as a table (see Output format), in addition to the severity findings below.
+
+## Delta re-review (when a previous report is provided)
+
+When you are handed a **previous `review-report.md`** plus a delta diff (`git diff <previous-verdict-head>..HEAD`), you are re-reviewing a revision, not starting over:
+
+1. Read the previous report: which criteria passed, which failed, and the findings.
+2. Review the **delta diff in full** — that is the new code.
+3. Re-grade every criterion the delta touches, and every criterion that previously FAILed (verify the fix actually landed). Criteria the delta does not touch **carry forward** their previous PASS — cite "unchanged since <short-sha>" as the evidence.
+4. Write the complete report (all criteria, carried-forward and re-graded) and emit a **fresh marker** with the current HEAD. The gate only reads the newest marker; a partial report would erase the record.
+
+This is what keeps revision loops cheap: the full-diff review happens once; each subsequent round costs only the delta.
 
 ## Your task
 

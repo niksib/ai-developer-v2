@@ -3,11 +3,28 @@
   "typecheck": "npm run typecheck",
   "build": "npm run build",
   "test": "npm test --if-present",
+  "testAffected": null,
   "coverage": null,
-  "_comment": "Set \"coverage\" to e.g. \"npx vitest run --coverage\" to enforce a threshold (configure test.coverage.thresholds in vitest config + install @vitest/coverage-v8). Leave null until configured — the diff-aware testGlobs gate below already enforces that tests exist. Co-located __tests__ per FSD slice.",
+  "_comment": "Set \"coverage\" to e.g. \"npx vitest run --coverage\" to enforce a threshold (configure test.coverage.thresholds in vitest config + install @vitest/coverage-v8). Leave null until configured \u2014 the diff-aware testGlobs gate below already enforces that tests exist. Co-located __tests__ per FSD slice.",
   "testGlobs": {
-    "source": ["**/*.vue", "**/*.ts"],
-    "test": ["**/__tests__/**", "**/*.spec.ts", "**/*.test.ts"],
-    "ignore": ["**/*.d.ts", "nuxt.config.ts", "app.config.ts", "**/*.config.ts", "**/types.ts", "**/*.types.ts", "**/index.ts"]
-  }
+    "source": [
+      "**/*.vue",
+      "**/*.ts"
+    ],
+    "test": [
+      "**/__tests__/**",
+      "**/*.spec.ts",
+      "**/*.test.ts"
+    ],
+    "ignore": [
+      "**/*.d.ts",
+      "nuxt.config.ts",
+      "app.config.ts",
+      "**/*.config.ts",
+      "**/types.ts",
+      "**/*.types.ts",
+      "**/index.ts"
+    ]
+  },
+  "_affectedComment": "S-tier fast lane: set to an affected-only test command (e.g. \"npx --no-install vitest run --changed\") once you trust its change detection. null = S runs the full \"test\" command (fail-safe)."
 }

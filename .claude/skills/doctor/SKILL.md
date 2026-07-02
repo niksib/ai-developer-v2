@@ -18,10 +18,10 @@ You touch only build/CI plumbing here (a `Makefile`, missing dev dependencies). 
    - laravel: `vendor/` present, else `composer install`.
 
 3. **`make check` exists?** Look for a `Makefile` with a `check:` target (the checker also honours an `AI_DEV_CHECK_CMD` override).
-   - **Present** → run `make check` once on the untouched project to confirm the baseline.
-   - **Missing** → scaffold it. Generate a `check:` target that runs each non-null command from the stack's `check-commands.json` (lint → typecheck → test → coverage → build), in that order, fail-fast. Add granular targets (`make lint`, `make test`, …) for your own inner loop. Commit the Makefile on its own with `chore: add make check entrypoint`.
+   - **Present** → confirm the baseline (step 4).
+   - **Missing** → scaffold it. Generate a `check:` target that runs each non-null command from the stack's `check-commands.json` (lint → typecheck → test → coverage → build), in that order, fail-fast. Add granular targets (`make lint`, `make test`, …) for your own inner loop. Optionally add a `check-fast:` target (lint → typecheck → affected-only tests) — the gate uses it as the S-tier fast lane when present. Commit the Makefile on its own with `chore: add make check entrypoint`.
 
-4. **Baseline must be green.** If `make check` fails on code you have **not** touched, **stop and tell the human** — one specific message: which command fails and the first error. Do not implement on top of a red baseline: the gate would blame your change for pre-existing failures, and you must never weaken the gate to get past them.
+4. **Baseline must be green.** Confirm it by running the checker itself: `node "$AI_DEV_AGENT_ROOT/scripts/checker.mjs"`. It runs the project's `make check` **and caches a green result by work-tree hash** — so on an unchanged repo this step costs nothing, and your later Stop-hook runs reuse the same cache. If it fails on code you have **not** touched, **stop and tell the human** — one specific message: which command fails and the first error. Do not implement on top of a red baseline: the gate would blame your change for pre-existing failures, and you must never weaken the gate to get past them.
 
 5. **Record** what you found/did in `progress.md`: stack, tools installed, Makefile scaffolded or reused, baseline result.
 

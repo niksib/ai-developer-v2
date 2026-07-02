@@ -20,20 +20,18 @@
  *   - CAPPED. We block at most `maxBlocks` times per staleness episode (the counter
  *     refills once the anchor is fresh again). After the cap we allow regardless —
  *     the agent got nudged; we never wedge it.
- *   - No-op when there is no task to guard (AI_DEV_TASK_ARTIFACTS_DIR unset →
- *     standalone / self-dev), and disabled for eval (GATE_ONLY / AI_DEV_EVAL) or
- *     via AI_DEV_PRECOMPACT_GUARD=off.
- *
- * Claude-only: the Gemini CLI has no PreCompact hook, so the gemini-developer
- * mirror is the lifecycle-skill instruction only (same schema, no enforcement).
- * See CONTEXT-BUDGET.md.
+ *   - No-op when there is no task to guard: the artifacts dir (default
+ *     `./.agent-task/`, override AI_DEV_TASK_ARTIFACTS_DIR) does not exist yet —
+ *     the lifecycle skill creates it at triage, so its absence means chat /
+ *     self-dev, not a task. Disabled for eval (GATE_ONLY / AI_DEV_EVAL) or via
+ *     AI_DEV_PRECOMPACT_GUARD=off.
  *
  * Env knobs:
  *   AI_DEV_PROGRESS_MIN_BYTES     min size for "not thin" (default 300)
  *   AI_DEV_PRECOMPACT_MAX_BLOCKS  blocks per staleness episode before we cap (default 2)
  *   AI_DEV_PRECOMPACT_GUARD=off   disable entirely
  */
-import { readFileSync, writeFileSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, statSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -49,11 +47,12 @@ export const config = {
     process.env.AI_DEV_PRECOMPACT_GUARD === 'off' ||
     process.env.AI_DEV_EVAL === '1' ||
     Boolean(process.env.GATE_ONLY),
-  artifactsDir: process.env.AI_DEV_TASK_ARTIFACTS_DIR || null,
+  artifactsDir: process.env.AI_DEV_TASK_ARTIFACTS_DIR
+    || join(process.env.CLAUDE_PROJECT_DIR || process.cwd(), '.agent-task'),
   minBytes: Number(process.env.AI_DEV_PROGRESS_MIN_BYTES) || 300,
   minSections: 3, // of the 5 schema concepts — enough to tell structure from a stub
   maxBlocks: Number(process.env.AI_DEV_PRECOMPACT_MAX_BLOCKS) || 2,
-  gateRepos: (process.env.AI_DEV_GATE_REPO || '')
+  gateRepos: (process.env.AI_DEV_GATE_REPO || process.env.CLAUDE_PROJECT_DIR || process.cwd())
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean),
@@ -144,7 +143,9 @@ function block(reason) { process.stderr.write(reason + '\n'); process.exit(2); }
 
 function main() {
   try {
-    if (config.disabled || !config.artifactsDir) return allow();
+    // The lifecycle skill creates the artifacts dir at triage; if it does not
+    // exist there is no task in flight (plain chat / self-dev) — nothing to guard.
+    if (config.disabled || !existsSync(config.artifactsDir)) return allow();
     const payload = JSON.parse(readFileSync(0, 'utf8'));
     if (payload.hook_event_name && payload.hook_event_name !== 'PreCompact') return allow();
 
