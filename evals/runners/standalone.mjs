@@ -25,15 +25,14 @@ function runClaude(args, { cwd, env, timeoutMs }) {
 }
 
 /**
- * Standalone runner — the target architecture. Installs the agent's portable
+ * Standalone runner — the native architecture. Installs the agent's portable
  * "brain" (lifecycle skill + hooks + subagents) into the work repo and drives
- * the task with one headless `claude -p` run. The lifecycle skill self-drives
- * the phases; the Stop hook enforces the test gate; review runs as an opus
- * subagent for fresh context.
+ * the task with one headless `claude -p` run. The lifecycle skill triages the
+ * task (S/M/L) and self-drives its route; the Stop hook enforces the gates.
  *
- * The brain files (.claude/, pipeline.json, .agent-task/) are gitignored and
- * excluded by the gate, so they don't pollute the agent's diff or the score.
- * $HOME is left intact so `claude` auth works; the strategy is the knob.
+ * The brain files (.claude/, .agent-task/) are gitignored and excluded by the
+ * gate, so they don't pollute the agent's diff or the score. $HOME is left
+ * intact so `claude` auth works; the strategy picks the brain's model.
  *
  * Needs: `claude` CLI authenticated; for UI tasks, Chromium
  * (`npx playwright install chromium`).
@@ -47,23 +46,19 @@ export async function run({ taskDir, taskJson, workDir, strategy, base }) {
   // Install the brain into the work repo (harmless to scoring; the gate excludes
   // .claude and these paths don't match test/source/doc globs).
   await cp(join(AGENT_DIR, '.claude'), join(workDir, '.claude'), { recursive: true });
-  // The strategy is the knob → the pipeline the lifecycle skill reads.
-  await writeFile(join(workDir, 'pipeline.json'), JSON.stringify(buildPipeline(strategy, taskJson), null, 2));
-  // Playwright MCP for the ui_verification phase (uses the host's installed chromium).
-  // Standalone-only config: omits the backend task-orchestrator server.
+  // Playwright MCP for UI verification (uses the host's installed chromium).
   const mcpConfigPath = join(workDir, '.mcp.json');
   await writeFile(mcpConfigPath, JSON.stringify({
     mcpServers: { playwright: { command: 'npx', args: ['-y', '@playwright/mcp@latest', '--headless', '--isolated'] } },
   }, null, 2));
   // Keep the agent's commits clean.
-  await appendFile(join(workDir, '.gitignore'), '\n# eval/agent runtime\n.claude/\npipeline.json\n.mcp.json\n.agent-task/\n.eval-result.json\n');
+  await appendFile(join(workDir, '.gitignore'), '\n# eval/agent runtime\n.claude/\n.mcp.json\n.agent-task/\n.eval-result.json\n');
 
   const brief = await readFile(join(taskDir, 'brief.md'), 'utf-8');
   const prompt = ['Use your `lifecycle` skill to take this task to completion.', '', '--- TASK ---', brief].join('\n');
 
   const env = {
     AI_DEV_AGENT_ROOT: AGENT_DIR,
-    AI_DEV_PIPELINE: join(workDir, 'pipeline.json'),
     GATE_BASE_REF: base,
     AI_DEV_EVAL: '1',
     // Minimal fixtures have no real linter/typecheck setup; scope the gate to
@@ -83,20 +78,4 @@ export async function run({ taskDir, taskJson, workDir, strategy, base }) {
     try { Object.assign(meta, JSON.parse(await readFile(resultFile, 'utf-8'))); } catch { /* keep defaults */ }
   }
   return meta;
-}
-
-/** Map an eval strategy onto the agent's declarative pipeline (mirrors pipeline.json). */
-function buildPipeline(strategy, taskJson) {
-  const implRunner = strategy.coderRunner === 'subagent' ? 'subagent:coder' : 'main';
-  return {
-    artifactsDir: '.agent-task',
-    phases: [
-      { id: 'analysis', runner: 'main', gate: null },
-      { id: 'spec', runner: 'main', gate: null, sets: ['uiScope'] },
-      { id: 'implementation', runner: implRunner, model: strategy.models?.coder ?? strategy.models?.main ?? 'sonnet', gate: 'tests' },
-      { id: 'review', runner: 'subagent:code-reviewer', model: strategy.models?.review ?? 'opus', gate: 'rubric' },
-      { id: 'ui_verification', runner: 'main', gate: 'ui-scenarios', skipIf: taskJson.expectsUi ? null : 'noUi' },
-      { id: 'documentation', runner: 'main', gate: null },
-    ],
-  };
 }

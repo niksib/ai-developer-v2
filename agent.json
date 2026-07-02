@@ -1,8 +1,0 @@
-{
-  "name": "ai-developer",
-  "displayName": "AI Developer",
-  "description": "Full-stack developer for Laravel + Vue/Nuxt/Inertia + NestJS projects. Implements features, fixes bugs, refactors, maintains code quality.",
-  "version": "1.0.0",
-  "official": true,
-  "supportedStacks": ["laravel", "nuxt", "nestjs"]
-}

@@ -613,7 +613,7 @@ export class UserEntity {
 
 ## Per-task test database (worktree mode)
 
-When the orchestrator runs a task in an isolated worktree it provisions a dedicated, throwaway database and injects these env vars into the agent process:
+When an orchestrator or CI runs the task in an isolated worktree it may provision a dedicated, throwaway database and injects these env vars into the agent process:
 
 ```
 TEST_DB_ENGINE   postgres | mysql

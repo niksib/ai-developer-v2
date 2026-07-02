@@ -1,14 +1,9 @@
 {
   "mcpServers": {
-    "task-orchestrator": {
-      "command": "node",
-      "args": ["../../mcp-server/dist/index.js"],
-      "description": "Exposes task lifecycle tools (advance phase, ask user, register PR, ...). Reads TASK_ID and BACKEND_URL from the env that the orchestrator backend sets at spawn time."
-    },
     "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest", "--headless", "--isolated", "--output-dir", ".playwright-mcp"],
-      "description": "Headless browser driver for the ui_verification phase. Lets the agent navigate/click/fill/screenshot the running app to verify it works. Only use these tools in the ui_verification phase. Requires Chromium installed in the runtime (npx playwright install chromium, one-time host setup)."
+      "description": "Headless browser driver for UI verification. Lets the agent navigate/click/fill/screenshot the running app to verify it works. Only use these tools when verifying UI scenarios. Requires Chromium installed in the runtime (npx playwright install chromium, one-time host setup)."
     }
   }
 }
