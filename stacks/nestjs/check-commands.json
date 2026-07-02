@@ -1,0 +1,13 @@
+{
+  "lint": "npm run lint",
+  "typecheck": "npx tsc --noEmit",
+  "build": "npm run build",
+  "test": "npm test",
+  "coverage": null,
+  "_comment": "Set \"coverage\" to e.g. \"npm run test:cov\" to enforce a coverage threshold (configure jest coverageThreshold). Leave null until configured — the diff-aware testGlobs gate below already enforces that tests exist. Business logic (actions/services) must be tested; pure structure (modules/dtos/entities) is exempt.",
+  "testGlobs": {
+    "source": ["src/**/*.ts"],
+    "test": ["**/*.spec.ts", "**/*.e2e-spec.ts", "test/**/*.ts"],
+    "ignore": ["**/*.module.ts", "**/main.ts", "**/*.dto.ts", "**/*.entity.ts", "**/*.interface.ts", "**/migrations/**", "**/*.config.ts"]
+  }
+}

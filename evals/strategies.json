@@ -1,0 +1,31 @@
+{
+  "$comment": "Model strategies the eval harness compares. `runner` picks the adapter in runners/. `models` maps a logical role to a Claude alias; `coderRunner` says whether implementation runs in the main session or is delegated to a sonnet coder-subagent. Decide on data: success rate > cost > latency.",
+  "strategies": {
+    "baseline": {
+      "runner": "backend",
+      "driveMode": "orchestrated",
+      "description": "Legacy command-center pipeline. Backend drives phases and switches models per phase (analysis/spec/review=opus, implementation/revising=sonnet, pr/docs=haiku). Kept for a regression flip.",
+      "models": null,
+      "coderRunner": "backend-phase"
+    },
+    "autonomous-backend": {
+      "runner": "backend",
+      "driveMode": "autonomous",
+      "description": "Phase 3 proof: backend spawns ONE self-driving agent (opus brain + sonnet coder subagents + opus review subagent) and only observes it via progress reports. Same lifecycle skill + Stop-hook gate the standalone runner proved — but driven through the real backend.",
+      "models": null,
+      "coderRunner": "agent-subagent"
+    },
+    "opus-everywhere": {
+      "runner": "standalone",
+      "description": "Standalone agent. Main session on Opus for the whole task (analysis/spec/impl/ui/docs). Review delegated to an opus subagent purely for fresh, unbiased context.",
+      "models": { "main": "opus", "review": "opus" },
+      "coderRunner": "main"
+    },
+    "opus-orchestrator": {
+      "runner": "standalone",
+      "description": "Standalone agent, orchestrator-workers. Opus 'brain' main session does research/spec/review/coordination; implementation is delegated to Sonnet coder-subagents (implement+test+green, return diff). Review = opus subagent.",
+      "models": { "main": "opus", "coder": "sonnet", "review": "opus" },
+      "coderRunner": "subagent"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "nuxt-003-format-price-bug",
+  "stack": "nuxt",
+  "fixture": "nuxt-app",
+  "title": "Fix formatPrice dropping the cents",
+  "expectsUi": false,
+  "checks": {
+    "testsAdded": true,
+    "testGlobs": ["**/*.spec.ts", "**/*.test.ts", "**/__tests__/**"],
+    "testCommand": "npm run test"
+  }
+}

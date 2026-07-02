@@ -1,0 +1,9 @@
+{
+  "name": "ai-developer-evals",
+  "private": true,
+  "type": "module",
+  "description": "Eval harness for the AI developer agent. playwright lives here so each task's verify.mjs resolves it via the Node parent-directory node_modules walk (verify.mjs sits under evals/tasks/<id>/).",
+  "dependencies": {
+    "playwright": "latest"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "lint": "vendor/bin/pint --test",
+  "typecheck": null,
+  "build": null,
+  "test": "php artisan test",
+  "coverage": null,
+  "_comment": "Set \"coverage\" to e.g. \"php artisan test --coverage --min=70\" to enforce a coverage threshold. Requires Xdebug or PCOV installed in the runtime — leave null until a coverage driver is available, the diff-aware testGlobs gate below already enforces that tests exist.",
+  "testGlobs": {
+    "source": ["app/**/*.php", "src/**/*.php"],
+    "test": ["tests/**/*Test.php", "tests/**/*.php"],
+    "ignore": ["app/Providers/**", "app/Console/**", "app/Exceptions/Handler.php", "**/Migrations/**"]
+  }
+}

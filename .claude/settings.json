@@ -1,0 +1,41 @@
+{
+  "$comment": "Three harness gates. (1) Stop hook -> checker.mjs: every time the agent tries to finish, production code changed without a test or red lint/typecheck/tests => exit 2 forces it to keep working (capped, then escalates); fail-CLOSED. (2) PreToolUse hook -> read-budget.mjs on Read/Grep/Glob: the brain may read task artifacts + its own docs + `git diff` freely, but reading the project code (AI_DEV_GATE_REPO) beyond a per-phase token budget is denied with a nudge to delegate wide reading to an Explore subagent (keeps the brain a dispatcher, not a reader); fail-OPEN, skips subagents, no-op without AI_DEV_GATE_REPO. (3) PreCompact hook -> precompact-guard.mjs: before context compaction discards the window, it blocks (exit 2) if progress.md is missing/thin/unstructured/stale so the brain flushes its survival anchor first; fail-SAFE (allow on any error), capped at AI_DEV_PRECOMPACT_MAX_BLOCKS per staleness episode so it never deadlocks, no-op without AI_DEV_TASK_ARTIFACTS_DIR. AI_DEV_AGENT_ROOT falls back to the project dir for self-dev here (no stack => Stop gate is a no-op; no gate repo => read budget is a no-op; no artifacts dir => precompact guard is a no-op).",
+  "$envComment": "Lever B (CONTEXT-BUDGET.md): cap the brain's window by compacting EARLY instead of at the 1M ceiling. Claude Code computes its auto-compaction trigger as AUTO_COMPACT_WINDOW * PCT_OVERRIDE/100; on Opus 4.8 BOTH vars are required (the PCT override alone won't fire proactively). 200000 * 75% => compact at ~150k, well below the 350-470k balloon and the context-rot zone. Agent-RESIDENT on purpose (two-mode principle): it travels to server-mode `claude -p`, and B0's PreCompact guard makes the reset safe. Tune in B2 (150k aggressive <-> 200k mild) via these values; set DISABLE_AUTO_COMPACT=1 to turn the whole lever off. NOTE: applies to every session launched in this folder, interactive self-dev included. VERIFIED 2026-06-19 (B2): on CC-22 the brain compacted twice and peaked at 139k (vs CC-21's 281k un-compacted, same meter) — a clean sawtooth, ~2x token cut, no quality regression. settings.env IS honored at launch (compaction fired at ~150k, not the ceiling), so the launcher-fallback move is unnecessary. See CONTEXT-BUDGET.md B2.",
+  "env": {
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "75"
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${AI_DEV_AGENT_ROOT:-$CLAUDE_PROJECT_DIR}/scripts/checker.mjs\" --hook"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${AI_DEV_AGENT_ROOT:-$CLAUDE_PROJECT_DIR}/scripts/read-budget.mjs\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${AI_DEV_AGENT_ROOT:-$CLAUDE_PROJECT_DIR}/scripts/precompact-guard.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

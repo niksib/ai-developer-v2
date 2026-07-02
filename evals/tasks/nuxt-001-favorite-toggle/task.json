@@ -1,0 +1,14 @@
+{
+  "id": "nuxt-001-favorite-toggle",
+  "stack": "nuxt",
+  "fixture": "nuxt-app",
+  "title": "Add a favorite toggle to ProductCard",
+  "expectsUi": true,
+  "checks": {
+    "testsAdded": true,
+    "testGlobs": ["**/*.spec.ts", "**/*.test.ts", "**/__tests__/**"],
+    "testCommand": "npm run test",
+    "docGlobs": ["docs/**"],
+    "uiVerify": "verify.mjs"
+  }
+}

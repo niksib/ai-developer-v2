@@ -1,0 +1,14 @@
+{
+  "id": "nuxt-002-price-filter",
+  "stack": "nuxt",
+  "fixture": "nuxt-app",
+  "title": "Add a max-price filter to the products page",
+  "expectsUi": true,
+  "checks": {
+    "testsAdded": true,
+    "testGlobs": ["**/*.spec.ts", "**/*.test.ts", "**/__tests__/**"],
+    "testCommand": "npm run test",
+    "docGlobs": ["docs/**"],
+    "uiVerify": "verify.mjs"
+  }
+}

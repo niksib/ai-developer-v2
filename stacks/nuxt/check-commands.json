@@ -1,0 +1,13 @@
+{
+  "lint": "npm run lint",
+  "typecheck": "npm run typecheck",
+  "build": "npm run build",
+  "test": "npm test --if-present",
+  "coverage": null,
+  "_comment": "Set \"coverage\" to e.g. \"npx vitest run --coverage\" to enforce a threshold (configure test.coverage.thresholds in vitest config + install @vitest/coverage-v8). Leave null until configured — the diff-aware testGlobs gate below already enforces that tests exist. Co-located __tests__ per FSD slice.",
+  "testGlobs": {
+    "source": ["**/*.vue", "**/*.ts"],
+    "test": ["**/__tests__/**", "**/*.spec.ts", "**/*.test.ts"],
+    "ignore": ["**/*.d.ts", "nuxt.config.ts", "app.config.ts", "**/*.config.ts", "**/types.ts", "**/*.types.ts", "**/index.ts"]
+  }
+}

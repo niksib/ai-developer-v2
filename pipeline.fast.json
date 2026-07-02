@@ -1,0 +1,10 @@
+{
+  "$comment": "Fast workflow preset — 'code + review'. Selected when a task's mode is 'fast' (see WorkflowPipelineService.resolvePipelinePath). Skips analysis, spec and the human approval gate: the agent goes straight to implementation, then the code-reviewer grades the rubric (required — never skippable). The two optional tail phases default OFF for fast tasks (disabledSteps = ['ui_verification','documentation']) but the user may re-enable either. There is no 'spec' phase to set uiScope, so 'implementation' carries \"sets\":[\"uiScope\"]: the lifecycle skill writes uiScope at the start of implementation (none, unless the change is user-visible AND ui_verification is enabled). Same shape and runners as pipeline.json so the board and checker read it identically.",
+  "artifactsDir": ".agent-task",
+  "phases": [
+    { "id": "implementation", "label": "Implementation", "description": "Implements the task with tests (mandatory hard gate). Writes uiScope at the start since there is no spec phase.", "runner": "subagent:coder", "gate": "tests", "produces": ["manual-test.md"], "sets": ["uiScope"] },
+    { "id": "review", "label": "Review", "description": "Code-reviewer subagent grades the rubric — any FAIL blocks shipping. Required in fast mode.", "runner": "subagent:code-reviewer", "model": "opus", "gate": "rubric", "produces": ["review-report.md"] },
+    { "id": "ui_verification", "label": "UI verification", "description": "Drives the app in a real browser to verify the UI.", "optional": true, "runner": "subagent:ui-verifier", "model": "sonnet", "gate": "ui-scenarios", "skipIf": "noUi", "produces": ["ui-verification-report.md"] },
+    { "id": "documentation", "label": "Documentation", "description": "Writes/updates project docs and finalises the manual test guide.", "optional": true, "runner": "subagent:docs", "model": "haiku", "gate": null, "produces": ["docs/**", "doc-summary.md"] }
+  ]
+}
