@@ -6,7 +6,10 @@
  * is invoked directly — so these assertions exercise the helpers in isolation.
  */
 import assert from 'node:assert/strict';
-import { globToRegExp, matchesAny, isProductionSource, parseVerdictMarker } from './checker.mjs';
+import {
+  globToRegExp, matchesAny, isProductionSource, parseVerdictMarker,
+  parseArtifactField, normaliseTier, withinTierS,
+} from './checker.mjs';
 
 let passed = 0;
 function test(name, fn) {
@@ -51,6 +54,38 @@ test('parseVerdictMarker handles FAIL, missing, and wrong kind', () => {
   assert.equal(parseVerdictMarker('no marker here', 'review'), null);
   // a ui marker must not satisfy a review query
   assert.equal(parseVerdictMarker('<!-- GATE: ui verdict=PASS head=abc1234 -->', 'review'), null);
+});
+
+test('parseArtifactField reads a line-anchored field', () => {
+  const text = '# Progress\n\ntier: S\nuiScope: none\n';
+  assert.equal(parseArtifactField(text, 'tier'), 's');
+  assert.equal(parseArtifactField(text, 'uiScope'), 'none');
+  assert.equal(parseArtifactField(text, 'missing'), null);
+  assert.equal(parseArtifactField(null, 'tier'), null);
+});
+
+test('parseArtifactField never matches mid-word or mid-line prose', () => {
+  // "frontier: X" must not satisfy a `tier:` lookup; nor should prose that
+  // merely mentions the field name after other words on the line.
+  assert.equal(parseArtifactField('the frontier: wild\n', 'tier'), null);
+  assert.equal(parseArtifactField('we set the tier: S later\n', 'tier'), null);
+  assert.equal(parseArtifactField('  tier: M\n', 'tier'), 'm'); // leading indent is fine
+});
+
+test('normaliseTier is fail-closed: unknown/missing = L', () => {
+  assert.equal(normaliseTier('s'), 'S');
+  assert.equal(normaliseTier('M'), 'M');
+  assert.equal(normaliseTier('xl'), 'L');
+  assert.equal(normaliseTier(null), 'L');
+  assert.equal(normaliseTier(''), 'L');
+});
+
+test('withinTierS enforces both caps', () => {
+  const caps = { maxFiles: 2, maxLines: 40 };
+  assert.ok(withinTierS(1, 10, caps));
+  assert.ok(withinTierS(2, 40, caps));   // at the caps is still S
+  assert.ok(!withinTierS(3, 10, caps));  // too many files
+  assert.ok(!withinTierS(1, 41, caps));  // too many lines
 });
 
 console.log(`checker.test: ${passed} passed`);
