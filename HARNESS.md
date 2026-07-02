@@ -64,7 +64,7 @@ The self-improvement engine.
   the defect, fixes, confirms green, registers the gate, updates knowledge.
 - **Knowledge promotion** — a project-specific lesson that turns out general gets
   promoted into the agent's stack docs (and vice versa), so the two levels stay
-  in sync (today `gemini-developer` has already diverged from `ai-developer`).
+  in sync.
 
 ## Knowledge split
 
@@ -90,36 +90,47 @@ A review/ui subagent writes one line into its report artifact:
   have changed between `head` and the current working tree. Doc-only commits
   (the `documentation` phase runs last) do not invalidate it.
 
-### When each gate fires
-- **review** — required whenever production code changed (the rubric *is* the
-  gate). Decided: strongest stance, closes the honour-system hole. Relax by
-  scoping `GATE_ONLY` to exclude `review`.
-- **ui** — required only when the spec set `uiScope: ui` in `progress.md`.
-- Both are skipped when `GATE_ONLY` (trusted-caller env) excludes them — e.g.
+### When each gate fires (tier-aware)
+The lifecycle skill triages every task into `tier: S|M|L` (written to
+`progress.md`; missing/unknown = L, fail-closed). The gate reads it:
+
+- **red lint/typecheck/tests** — block on every tier. A green pass is cached by
+  work-tree hash, so a retry with no edits passes instantly.
+- **tests-mandatory** (prod change with no test) — M/L only. S trades it for
+  hard, diff-validated size caps (≤2 prod files / ≤40 lines, env-tunable): an
+  oversized S claim bounces with "escalate the tier". This closes the obvious
+  hole in letting the agent pick its own route.
+- **review** — required whenever production code changed, on M/L (the rubric
+  *is* the gate). S substitutes deliberate self-review + the caps. A stale
+  verdict is repaired by **delta re-review** (previous report + diff since the
+  verdict head), not a from-scratch pass.
+- **ui** — required on any tier when the task set `uiScope: ui` in `progress.md`.
+- All are skipped when `GATE_ONLY` (trusted-caller env) excludes them — e.g.
   eval fixtures run `GATE_ONLY=test`.
 
-## Observability — the context budget (measure → enforce)
+## The context budget (measured, then solved structurally)
 
-The brain's context window is the scarce resource. Autonomous runs ramp from a
-~28k baseline to **350–470k** over 350–465 single-chain turns, with **zero
-eviction** — every read/shell/tool-call from every phase stays in the window to
-the end. To keep the brain a *dispatcher* (wide reading → `Explore`, anything
-touching code → `coder`) we measure before we enforce.
+The brain's context window is the scarce resource. Headless autonomous runs
+ramped from a ~28k baseline to **350–470k** over 350–465 single-chain turns
+(full measurements and per-phase breakdowns: `CONTEXT-BUDGET.md`). What
+survived from that programme into v2:
 
-- `scripts/context-report.mjs <transcript.jsonl>` — per-phase readout of a brain
-  run: turns, inline file-reads, inline shell output, subagent spawns, and the
-  content split. Phases are segmented by the brain's own
-  `task_report_progress({ phase })` markers. `--scan <dir>` ranks runs by peak.
-- Findings (autonomous runs): **tool_result is 62–89%** of accumulated content,
-  **tool_use ~24–33%**, assistant text 1–6%. The brain reads **26–31 files itself
-  in analysis** and up to ~25k more tokens in implementation — exactly the reads
-  that belong in `Explore`/`coder`. The tool_use share only falls with **fewer
-  turns** (phase-boundary compaction), not delegation.
-- Next: turn these per-phase numbers into a **soft budget** enforced by a
-  PreToolUse hook — the brain may read task artifacts + the diff freely, but wide
-  codebase reads over the phase budget are denied with "delegate to an Explore
-  subagent." Same gate family as the Stop hook; must be mirrored to
-  `gemini-developer` (whose stream-json transcript needs its own parser).
+- **Lever B — early compaction** (`.claude/settings.json` env): compact at
+  ~150k instead of the ceiling. The measured win: peak 281k → 139k, ~2× token
+  cut, no quality regression. The **PreCompact guard** makes the frequent
+  resets safe by refusing to compact over a missing/thin/stale `progress.md`.
+- **The S/M/L router**: small tasks no longer walk the full pipeline at all —
+  the ballooning was a full-pipeline disease.
+- **The dispatcher instruction** (lifecycle skill): wide reading → `Explore`,
+  L-route code changes → `coder`; heavy material stays in the subagent's
+  window and its durable artifact.
+
+A **PreToolUse read-budget hook** (deny wide codebase reads over a per-phase
+budget) enforced the dispatcher rule mechanically in v1. Retired 2026-07-02 —
+see `GATES.md` for the reasoning and the re-instatement trigger (L-route
+ballooning recurring in practice). Its diagnostic sibling
+(`context-report.mjs`) is superseded natively by `/context`; both live in git
+history.
 
 ## Decisions locked in
 - Build order: **2 → 1 → 3** (prove enforcement inside the agent first, then the
@@ -127,10 +138,16 @@ touching code → `coder`) we measure before we enforce.
   later calls `make check` instead of the hardcoded per-stack commands.
 - Post-cap behaviour: **escalation artifact + allow stop** (durable record, no
   infinite loop, no silent bypass).
-- This document lives at `agents/ai-developer/HARNESS.md` (beside `CLAUDE.md`,
+- This document lives at the agent root (beside the skills and scripts,
   not in `memory/`, to avoid loading it into every task).
 
 ## Status
+
+**v2 (native, 2026-07-02):** the agent runs natively in Claude Code — no
+orchestrator, no task MCP, no pipeline files. The lifecycle skill triages
+tasks (S/M/L) and routes them; the checker validates tier claims, caches green
+passes by work-tree hash, and repairs stale review verdicts via delta
+re-review. Hooks are down to two: Stop → checker, PreCompact → guard.
 
 **Done (Layer 2 — enforcement):**
 - Fail-closed checker; crash → exit 2, not silent exit 1.
