@@ -37,7 +37,7 @@ context-window economics: [CONTEXT-BUDGET.md](CONTEXT-BUDGET.md).
   agents/              coder, code-reviewer, ui-verifier, docs subagents
 scripts/               checker.mjs (the gate) + precompact-guard.mjs, with tests
 stacks/                per-stack conventions, testing patterns, check commands
-memory/                cross-project decisions and conventions
+knowledge/             cross-project architecture defaults and conventions
 evals/                 task fixtures + standalone runner for A/B-ing strategies
 ```
 

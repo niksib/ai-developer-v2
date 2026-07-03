@@ -494,3 +494,36 @@ class DeleteUserAction
     }
 }
 ```
+
+## Naming Conventions
+
+| Type                 | Pattern                        | Example                              |
+|----------------------|--------------------------------|--------------------------------------|
+| DTO                  | `{Verb}{Entity}DTO`            | `CreateUserDTO`, `UpdateOrderDTO`    |
+| Service              | `{Entity}Service`              | `UserService`, `PaymentService`      |
+| Repository Interface | `{Entity}RepositoryInterface`  | `UserRepositoryInterface`            |
+| Repository           | `Eloquent{Entity}Repository`   | `EloquentUserRepository`             |
+| Event                | `{Entity}{PastTense}`          | `UserCreated`, `OrderPlaced`         |
+| Listener             | `{Verb}{Entity}Listener`       | `SendWelcomeEmailListener`           |
+| Job                  | `{Verb}{Entity}Job`            | `ProcessPaymentJob`, `SendEmailJob`  |
+| Exception            | `{Entity}{Reason}Exception`    | `UserNotFoundException`              |
+| Form Request         | `{Verb}{Entity}Request`        | `CreateUserRequest`                  |
+| Action               | `{Verb}{Entity}Action`         | `PublishPostAction`                  |
+| Controller           | `{Entity}Controller`           | `UserController`                     |
+| Resource             | `{Entity}Resource`             | `UserResource`                       |
+
+## Code Style — PSR-12
+
+All PHP code follows PSR-12, enforced by Laravel Pint. Run Pint before committing; the quality gate runs it too.
+
+## Laravel Boost MCP
+
+Each Laravel project has its own `.mcp.json` with a Docker-based Laravel Boost config. Use it for artisan commands, route listing, and model inspection.
+
+## SEO Meta — SeoRule Only
+
+Never add `meta_title`, `meta_description`, `meta_keywords`, or any other SEO meta columns to entity tables or their `_translations` tables. SEO metadata is managed exclusively via the `SeoRule` domain — centralised SEO management, no duplicated meta fields across entities.
+
+## Translations Tables — Content Columns Nullable
+
+Every content column in `_translations` tables (title, slug, name, body, description, etc.) must be `->nullable()` in migrations. Only `id`, `locale`, the foreign key, and timestamps are NOT NULL. Non-fallback locales may legitimately have no translation yet; NOT NULL causes insert failures when saving a record with only the fallback locale filled.

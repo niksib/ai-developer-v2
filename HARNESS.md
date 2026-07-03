@@ -68,7 +68,7 @@ The self-improvement engine.
 
 ## Knowledge split
 
-- **Agent-global** (`stacks/`, `memory/`): reusable architecture / conventions /
+- **Agent-global** (`stacks/`, `knowledge/`): reusable architecture / conventions /
   testing per stack. Travels with the agent, applies everywhere.
 - **Project-local** (`<project>/.agent/` or `docs/`): concrete decisions, known
   problems, project-specific gates, incident log. Travels with the project.
@@ -139,7 +139,7 @@ history.
 - Post-cap behaviour: **escalation artifact + allow stop** (durable record, no
   infinite loop, no silent bypass).
 - This document lives at the agent root (beside the skills and scripts,
-  not in `memory/`, to avoid loading it into every task).
+  not in `knowledge/`, to avoid loading it into every task).
 
 ## Status
 

@@ -498,3 +498,26 @@ Multiple tasks may run `ui_verification` concurrently in separate worktrees. To 
 - **Pick a free port dynamically** — never hardcode `3000` or any default. Detect a free port at runtime (e.g. `node -e "const net=require('net');const s=net.createServer();s.listen(0,()=>{console.log(s.address().port);s.close()})"`) and pass it via `--port`.
 - **Use an isolated data directory** — if the project writes any runtime data (uploads, cache files), point it at a path scoped to the worktree, not a shared location.
 - **Stop only the server you started** — store the process reference or PID and kill only that process when verification finishes. Never run `pkill node`, `pkill nuxt`, or any broad process kill that would terminate other tasks' servers.
+
+## Naming Conventions
+
+| Type              | Pattern              | Example                                        |
+|-------------------|----------------------|------------------------------------------------|
+| Interface         | `{Entity}`           | `User`, `Order`, `Pagination`                  |
+| DTO type          | `{Verb}{Entity}DTO`  | `CreateUserDTO`, `UpdateOrderDTO`              |
+| Model composable  | `use{Entity}`        | `useUser`, `useAuth`, `useOrderList`           |
+| Feature composable| `use{Verb}{Entity}`  | `useCreateOrder`, `useLoginForm`               |
+| Store             | `use{Entity}Store`   | `useAuthStore`, `useCartStore`                 |
+| Page file         | kebab-case           | `user-profile.vue`, `order-list.vue`           |
+| Component         | PascalCase           | `UserCard.vue`, `OrderTable.vue`               |
+
+### FSD Folder Naming
+
+| Layer / Element      | Pattern        | Example                                      |
+|----------------------|----------------|----------------------------------------------|
+| Feature slice folder | `kebab-case`   | `auth-login/`, `create-order/`, `add-to-cart/` |
+| Entity slice folder  | `kebab-case`   | `user/`, `order/`, `video-post/`             |
+| Widget slice folder  | `kebab-case`   | `header/`, `order-feed/`, `user-sidebar/`    |
+| Shared UI folder     | `kebab-case`   | `shared/ui/`, `shared/lib/`, `shared/api/`   |
+| Public API file      | `index.ts`     | every slice has `index.ts` — only this is imported from outside |
+| Internal folders     | fixed names    | `ui/`, `model/`, `api/` inside every slice   |

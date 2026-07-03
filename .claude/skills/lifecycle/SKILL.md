@@ -8,7 +8,7 @@ description: Drive a development task autonomously from triage to done. Use when
 You take a task all the way to a ready solution **without a human in the loop**, except where you genuinely must ask. There is no fixed pipeline: **triage the task first and take the lightest route that fits.** The Stop gate at the end is the same for every route — freedom in the middle, determinism at the boundary.
 
 - Stack knowledge: `$AI_DEV_AGENT_ROOT/stacks/<stack>/` (conventions, testing, check-commands).
-- Global memory: `$AI_DEV_AGENT_ROOT/memory/` (decisions, conventions, review).
+- Global knowledge: `$AI_DEV_AGENT_ROOT/knowledge/` (architecture defaults, conventions).
 
 Keep working artifacts in `./.agent-task/` inside the target repo (create it; make sure it is gitignored — never commit it). `$AI_DEV_TASK_ARTIFACTS_DIR` overrides the location when set (evals/CI). `progress.md` lives there on every route; the heavier artifacts (`trace.md`, `spec.md`, `rubric.md`, `manual-test.md`, `review-report.md`, `ui-verification-report.md`) appear only on the routes that need them.
 
@@ -46,7 +46,7 @@ The full flow, with subagent delegation to keep your window lean.
 
 **Handoff is via artifacts, not memory.** Every subagent writes its durable output to the task artifacts (`coder` → commits + `manual-test.md`; `code-reviewer` → `review-report.md`; `ui-verifier` → `ui-verification-report.md`; `docs` → docs + `doc-summary.md`). A later revision re-bootstraps a fresh subagent from `spec.md` + the current `git diff` + those artifacts — the code on disk **is** the record; no subagent needs its old transcript.
 
-1. **analysis** — Understand the task and the codebase. Explore read-only; use `Explore` subagents for wide reading (see Context discipline). Record findings in `trace.md`. If scope is genuinely unclear or a business rule is missing, ask **one** specific question with a proposed default; otherwise proceed.
+1. **analysis** — Understand the task and the codebase. Explore read-only; use `Explore` subagents for wide reading (see Context discipline). Record findings in `trace.md`. If scope is genuinely unclear or a business rule is missing, ask **one** specific question with a proposed default, phrased for your audience (CLAUDE.md → Audience: in `client` mode it must be a product question in plain language, never a technical one); otherwise proceed.
 2. **spec** — Write `spec.md` (Goal, Files, User flow, Definition of Done) and `rubric.md`: explicit, gradeable acceptance criteria, one per line as `- [ ] <criterion> → <how to verify>`, each mapped to a concrete test or visible state. Confirm/update `uiScope` in `progress.md`.
 3. **implementation** — Delegate slices to the `coder` subagent (fresh context, its own model): pass the spec, conventions and target paths **by path**, act on the short summary it returns. **Tests are mandatory** (the gate enforces it). Write `manual-test.md`. Run the checker yourself before leaving this phase and get it green.
 4. **review** — Delegate to the `code-reviewer` subagent with `rubric.md` and `git diff <base>..HEAD`; it grades each criterion PASS/FAIL with evidence, writes `review-report.md` ending with the verdict marker, and returns a short summary. Any FAIL → back to implementation, then **delta re-review** (previous report + `git diff <verdict-head>..HEAD`).
@@ -81,10 +81,10 @@ The `code-reviewer` and `ui-verifier` write a machine-readable marker (`<!-- GAT
 
 ## Context discipline — stay a dispatcher, not a reader
 
-Your window is the scarce resource; it is compacted early and often (Lever B), and everything you read inline sits in it until then. Targeted peeks at named files are fine, but for anything wide — surveying a module, hunting call sites, understanding a subsystem — dispatch an `Explore` subagent: it reads in its own window and hands you back a summary. On route L, anything that *touches* code goes through `coder`. Your own docs (`stacks/*`, `memory/*`), the task artifacts, and `git diff` are always cheap to re-read from disk after a compaction.
+Your window is the scarce resource; it is compacted early and often (Lever B), and everything you read inline sits in it until then. Targeted peeks at named files are fine, but for anything wide — surveying a module, hunting call sites, understanding a subsystem — dispatch an `Explore` subagent: it reads in its own window and hands you back a summary. On route L, anything that *touches* code goes through `coder`. Your own docs (`stacks/*`, `knowledge/*`), the task artifacts, and `git diff` are always cheap to re-read from disk after a compaction.
 
 ## Finishing
 
-When the route is walked and the gate is green, you are finished — report what shipped, where the artifacts are, and anything the human should look at. The human decides when it is *done*.
+When the route is walked and the gate is green, you are finished — report what shipped, where the artifacts are, and anything the human should look at. Phrase the report for your audience (CLAUDE.md → Audience): in `client` mode it is a plain-language product update — what they can now do, numbered steps to try it, the product decisions you made — with no code, paths or jargon. The human decides when it is *done*.
 
 If this run is under the eval harness (env `AI_DEV_EVAL=1`), write `.eval-result.json` at the repo root: `{"reachedDone": true, "askedHuman": false}`. If you had to stop and ask a human, write `{"reachedDone": false, "askedHuman": true}` instead and explain.

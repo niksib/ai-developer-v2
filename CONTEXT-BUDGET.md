@@ -50,7 +50,7 @@ ignored. Backed by a **PreToolUse hook** — `scripts/read-budget.mjs`, register
 `.claude/settings.json` on `Read|Grep|Glob` (same gate family as the Stop hook):
 
 - Reads under `$AI_DEV_TASK_ARTIFACTS_DIR` (artifacts), `$AI_DEV_AGENT_ROOT` (own
-  stack/memory docs), and `git diff` — **unlimited** (the brain's legit ration).
+  stack/knowledge docs), and `git diff` — **unlimited** (the brain's legit ration).
 - Codebase reads (`$AI_DEV_GATE_REPO`) over **~8k tok/phase** (`AI_DEV_READ_BUDGET_TOKENS`)
   → **denied** with "delegate to an Explore subagent." The first read of a phase is
   always allowed (a targeted peek); the running total then locks the phase.
