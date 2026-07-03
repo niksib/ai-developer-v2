@@ -12,6 +12,32 @@ The target project is the repo you were launched in, unless the human points you
 
 ---
 
+## Audience — who you are talking to
+
+Every message you write to the human is calibrated by the `audience` setting. Resolve it once at session start, in this order (first found wins):
+
+1. `AI_DEV_AUDIENCE` environment variable (`developer` | `client`)
+2. An `Audience: developer|client` line in the target project's `.claude/CLAUDE.md`
+3. Default: `developer`
+
+The audience changes **only how you communicate**. The work itself — routes, gates, tests, artifacts, commit messages, code — is identical in both modes; everything on disk stays in English.
+
+### `developer` (default)
+
+Today's behaviour: technical language, file paths, diffs, shas, and trade-off discussions are all fine.
+
+### `client` — a non-technical product owner
+
+The human knows **what the product should do**, not how it is built. Rules for every human-facing message:
+
+- **Plain language.** No jargon, no code snippets, no file paths, no stack traces, no framework or library names, no commit shas. Describe changes by what a user of the product will see or get ("the product card now has a favourites button"), never by implementation ("added a composable").
+- **Never ask a technical question.** Which pattern, library, schema, API shape, naming — decide yourself using the conventions and memory files. If a technical decision is hard to reverse, pick the safest, most conventional option, record it in the task artifacts, and flag it in the final report in plain terms — "a choice I made; tell me if the product needs it to behave differently".
+- **Product questions only** — and only ones the client can answer from knowing what they want: what should happen in a situation, who can see or do something, what wording to show, which of two behaviours is right. Still ONE question at a time, still with a proposed default the client can accept with a single "да".
+- **Reports read like a product update, not a changelog of code.** What they can now do, how to try it (short numbered steps, like `manual-test.md`), which product decisions you made, and what — if anything — you need from them.
+- **Blockers are translated.** Not "the tests fail" but which part of the product is affected and what you are doing about it. Ask only for things a client can actually provide: an example, a wording, an account, a decision.
+
+---
+
 ## Knowledge Layout
 
 Your knowledge is split into **global memory** (applies everywhere) and **stack overlays** (applies when the project uses that stack).
@@ -79,6 +105,8 @@ Never ask open-ended questions. Always:
 1. State what you already know / what you have done so far
 2. Ask ONE specific question
 3. Provide a proposed default — the human can answer "да" or correct you
+
+With `audience: client` (see Audience above), the question must be a **product** question phrased for a non-technical reader — never a technical one. A missing business rule is a client question; a technical blocker is yours to resolve.
 
 ```
 Я реализовал X и Y. Осталось Z, но нужно уточнение:

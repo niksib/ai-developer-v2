@@ -46,7 +46,7 @@ The full flow, with subagent delegation to keep your window lean.
 
 **Handoff is via artifacts, not memory.** Every subagent writes its durable output to the task artifacts (`coder` → commits + `manual-test.md`; `code-reviewer` → `review-report.md`; `ui-verifier` → `ui-verification-report.md`; `docs` → docs + `doc-summary.md`). A later revision re-bootstraps a fresh subagent from `spec.md` + the current `git diff` + those artifacts — the code on disk **is** the record; no subagent needs its old transcript.
 
-1. **analysis** — Understand the task and the codebase. Explore read-only; use `Explore` subagents for wide reading (see Context discipline). Record findings in `trace.md`. If scope is genuinely unclear or a business rule is missing, ask **one** specific question with a proposed default; otherwise proceed.
+1. **analysis** — Understand the task and the codebase. Explore read-only; use `Explore` subagents for wide reading (see Context discipline). Record findings in `trace.md`. If scope is genuinely unclear or a business rule is missing, ask **one** specific question with a proposed default, phrased for your audience (CLAUDE.md → Audience: in `client` mode it must be a product question in plain language, never a technical one); otherwise proceed.
 2. **spec** — Write `spec.md` (Goal, Files, User flow, Definition of Done) and `rubric.md`: explicit, gradeable acceptance criteria, one per line as `- [ ] <criterion> → <how to verify>`, each mapped to a concrete test or visible state. Confirm/update `uiScope` in `progress.md`.
 3. **implementation** — Delegate slices to the `coder` subagent (fresh context, its own model): pass the spec, conventions and target paths **by path**, act on the short summary it returns. **Tests are mandatory** (the gate enforces it). Write `manual-test.md`. Run the checker yourself before leaving this phase and get it green.
 4. **review** — Delegate to the `code-reviewer` subagent with `rubric.md` and `git diff <base>..HEAD`; it grades each criterion PASS/FAIL with evidence, writes `review-report.md` ending with the verdict marker, and returns a short summary. Any FAIL → back to implementation, then **delta re-review** (previous report + `git diff <verdict-head>..HEAD`).
@@ -85,6 +85,6 @@ Your window is the scarce resource; it is compacted early and often (Lever B), a
 
 ## Finishing
 
-When the route is walked and the gate is green, you are finished — report what shipped, where the artifacts are, and anything the human should look at. The human decides when it is *done*.
+When the route is walked and the gate is green, you are finished — report what shipped, where the artifacts are, and anything the human should look at. Phrase the report for your audience (CLAUDE.md → Audience): in `client` mode it is a plain-language product update — what they can now do, numbered steps to try it, the product decisions you made — with no code, paths or jargon. The human decides when it is *done*.
 
 If this run is under the eval harness (env `AI_DEV_EVAL=1`), write `.eval-result.json` at the repo root: `{"reachedDone": true, "askedHuman": false}`. If you had to stop and ask a human, write `{"reachedDone": false, "askedHuman": true}` instead and explain.

@@ -74,6 +74,12 @@ The agent reads this file first before any task, and reads the project's `.claud
 **Decision:** Every time a new domain or feature is added to visit-new, a corresponding `resources/docs/{slug}.md` file must be created (or updated). The file must include a "For Admins" section (how to use it) and a "For Developers" section (how it works + how to extend it). `resources/docs/index.md` must be updated to reference the new page.
 **Reason:** The Docs Viewer is the only knowledge base for admins and developers. It only stays useful if updated alongside the code.
 
+### Audience-aware communication (developer vs client)
+**Date:** 2026-07-03
+**Project:** all
+**Decision:** The agent resolves an `audience` setting once per session: `AI_DEV_AUDIENCE` env var → `Audience: developer|client` line in the target project's `.claude/CLAUDE.md` → default `developer`. With `audience: client`, every human-facing message is plain product language (no jargon, code, paths, shas) and the agent never asks technical questions — it decides technically itself and asks only product/behaviour questions the client can answer, one at a time with a proposed default. Code, commits, artifacts and gates are identical in both modes.
+**Reason:** The product is sold to non-technical product owners. Technical questions or code in chat are noise a client cannot act on; the client's knowledge is what the product should do — that is the only thing worth asking them.
+
 ### NestJS for Node.js backend
 **Date:** 2026-03-21
 **Project:** all Node.js services
