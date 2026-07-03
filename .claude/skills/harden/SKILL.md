@@ -26,7 +26,7 @@ Never settle for a lower rung when a higher one is expressible.
 4. **Register.** Append an entry to the gate registry — `GATES.md` for a stack/global gate, the project's `.agent/gates.md` for a project-specific one: date, level, the defect it prevents (symptom + root cause, one line each), and where the gate lives.
 5. **Promote the lesson.** If it generalises beyond this project, put the rule where it applies everywhere:
    - stack-wide → `stacks/<stack>/conventions.md` (or `testing.md`) **and** the `code-reviewer`'s checklist,
-   - cross-stack decision → `memory/decisions.md`,
+   - cross-stack decision → `knowledge/architecture.md`,
    - project-only → the project's `.agent/` docs.
 
 ## When NOT to add a gate

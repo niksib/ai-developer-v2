@@ -38,7 +38,7 @@ This is what keeps revision loops cheap: the full-diff review happens once; each
    - Laravel/PHP → [stacks/laravel/conventions.md](../../stacks/laravel/conventions.md) (+ [testing.md](../../stacks/laravel/testing.md))
    - NestJS/Node.js → [stacks/nestjs/conventions.md](../../stacks/nestjs/conventions.md)
    - Frontend (Vue/Nuxt) → [stacks/nuxt/conventions.md](../../stacks/nuxt/conventions.md)
-   - Always read → [memory/conventions.md](../../memory/conventions.md) and [memory/decisions.md](../../memory/decisions.md)
+   - Always read → [knowledge/conventions.md](../../knowledge/conventions.md) and [knowledge/architecture.md](../../knowledge/architecture.md)
 3. Review every changed file against those rules
 4. Write `review-report.md` with the verdict marker (see "Write your report"), then return the short summary
 

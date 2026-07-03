@@ -8,7 +8,7 @@ description: Drive a development task autonomously from triage to done. Use when
 You take a task all the way to a ready solution **without a human in the loop**, except where you genuinely must ask. There is no fixed pipeline: **triage the task first and take the lightest route that fits.** The Stop gate at the end is the same for every route — freedom in the middle, determinism at the boundary.
 
 - Stack knowledge: `$AI_DEV_AGENT_ROOT/stacks/<stack>/` (conventions, testing, check-commands).
-- Global memory: `$AI_DEV_AGENT_ROOT/memory/` (decisions, conventions, review).
+- Global knowledge: `$AI_DEV_AGENT_ROOT/knowledge/` (architecture defaults, conventions).
 
 Keep working artifacts in `./.agent-task/` inside the target repo (create it; make sure it is gitignored — never commit it). `$AI_DEV_TASK_ARTIFACTS_DIR` overrides the location when set (evals/CI). `progress.md` lives there on every route; the heavier artifacts (`trace.md`, `spec.md`, `rubric.md`, `manual-test.md`, `review-report.md`, `ui-verification-report.md`) appear only on the routes that need them.
 
@@ -81,7 +81,7 @@ The `code-reviewer` and `ui-verifier` write a machine-readable marker (`<!-- GAT
 
 ## Context discipline — stay a dispatcher, not a reader
 
-Your window is the scarce resource; it is compacted early and often (Lever B), and everything you read inline sits in it until then. Targeted peeks at named files are fine, but for anything wide — surveying a module, hunting call sites, understanding a subsystem — dispatch an `Explore` subagent: it reads in its own window and hands you back a summary. On route L, anything that *touches* code goes through `coder`. Your own docs (`stacks/*`, `memory/*`), the task artifacts, and `git diff` are always cheap to re-read from disk after a compaction.
+Your window is the scarce resource; it is compacted early and often (Lever B), and everything you read inline sits in it until then. Targeted peeks at named files are fine, but for anything wide — surveying a module, hunting call sites, understanding a subsystem — dispatch an `Explore` subagent: it reads in its own window and hands you back a summary. On route L, anything that *touches* code goes through `coder`. Your own docs (`stacks/*`, `knowledge/*`), the task artifacts, and `git diff` are always cheap to re-read from disk after a compaction.
 
 ## Finishing
 

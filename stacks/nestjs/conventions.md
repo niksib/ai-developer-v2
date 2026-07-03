@@ -3,7 +3,7 @@
 ## Core Rule
 **Zero business logic in Controllers, Guards, Interceptors, or Entities.**
 Mutations go through Actions. Queries go through Services. Data access in Repositories. Data shapes are DTOs.
-Mirrors the Laravel DDD approach — see [memory/backend.md](../memory/backend.md) for philosophy.
+Mirrors the Laravel DDD approach — see [stacks/laravel/conventions.md](../laravel/conventions.md) for the philosophy.
 
 ### Actions vs Services — the rule
 
