@@ -4,6 +4,11 @@
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest", "--headless", "--isolated", "--output-dir", ".playwright-mcp"],
       "description": "Headless browser driver for UI verification. Lets the agent navigate/click/fill/screenshot the running app to verify it works. Only use these tools when verifying UI scenarios. Requires Chromium installed in the runtime (npx playwright install chromium, one-time host setup)."
+    },
+    "basic-memory": {
+      "command": "uvx",
+      "args": ["basic-memory", "mcp"],
+      "description": "Long-term project memory (Second Brain knowledge base). Used by the second-brain-memory skill to recall past decisions/lessons before work and record session-logs to inbox/. Requires: uv/uvx on PATH, and the Second Brain registered as a basic-memory project (its default). If uvx isn't found (ENOENT), replace command with the absolute path from `which uvx`."
     }
   }
 }

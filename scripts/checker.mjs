@@ -350,6 +350,42 @@ function verdictGate(kind, reportName) {
   return [];
 }
 
+/**
+ * manual-test.md may declare a live-prod design-parity source of truth, e.g.:
+ *   "Old prod reference (design source of truth — new design MUST be identical): https://example.com"
+ * Extracts that reference's hostname, or null if no such claim is made.
+ */
+function readProdReferenceHost(manualTestText) {
+  const match = manualTestText.match(/old prod reference[^\n]*?(https?:\/\/[^\s`]+)/i);
+  if (!match) return null;
+  try {
+    return new URL(match[1].replace(/[)\].,`*_]+$/, '')).hostname;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * When manual-test.md claims design/content parity against a live prod URL, the
+ * ui-verification report must show it actually opened that URL — not a scenario
+ * wording like "compare against old prod / inventory doc" that lets a static
+ * inventory doc stand in for the real page. A report that never even mentions
+ * the prod host is proof nobody looked at it.
+ * Registered 2026-07-08 — see GATES.md.
+ */
+function uiParityEvidenceGate(reportText, manualTestText) {
+  if (!manualTestText) return [];
+  const host = readProdReferenceHost(manualTestText);
+  if (!host) return [];
+  if (!reportText.includes(host)) {
+    return [
+      `ui gate: manual-test.md requires design/content parity against live prod (${host}), but ui-verification-report.md never mentions it. ` +
+      `The ui-verifier must actually open ${host} (not just an inventory/reference doc built from source code) and cite it as evidence for every "Parity:" scenario — re-run ui verification with that requirement.`,
+    ];
+  }
+  return [];
+}
+
 /** Task-level gates that read the shared artifacts dir (run once, not per repo). */
 function gateArtifacts(anyProductionChanged, tier) {
   const out = [];
@@ -363,6 +399,12 @@ function gateArtifacts(anyProductionChanged, tier) {
   // UI: required on any tier when the task set uiScope: ui.
   if (keyEnabled('ui') && readUiScope() === 'ui') {
     out.push(...verdictGate('ui', 'ui-verification-report.md'));
+    if (out.length === 0) {
+      out.push(...uiParityEvidenceGate(
+        safeReadText(join(ARTIFACTS_DIR, 'ui-verification-report.md')) ?? '',
+        safeReadText(join(ARTIFACTS_DIR, 'manual-test.md')) ?? '',
+      ));
+    }
   }
   return out;
 }
