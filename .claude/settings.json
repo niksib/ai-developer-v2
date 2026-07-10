@@ -1,6 +1,6 @@
 {
-  "$comment": "Two harness gates. (1) Stop hook -> checker.mjs: every time the agent tries to finish, the deterministic gate runs — red lint/typecheck/tests block on every tier; M/L additionally require tests-with-prod-change and a fresh review verdict; S is validated against its size caps. A green pass is cached by work-tree hash, so a retry with no edits passes instantly. Fail-CLOSED (crash => keep working), capped, then escalates via gate-escalation.md. (2) PreCompact hook -> precompact-guard.mjs: before context compaction discards the window, it blocks (exit 2) if progress.md is missing/thin/unstructured/stale so the brain flushes its survival anchor first; fail-SAFE (allow on any error), capped at AI_DEV_PRECOMPACT_MAX_BLOCKS per staleness episode so it never deadlocks; no-op while ./.agent-task/ does not exist (no task in flight). The former PreToolUse read-budget hook was retired 2026-07-02 — see GATES.md.",
-  "$envComment": "Lever B (CONTEXT-BUDGET.md) DISABLED 2026-07-08 by user decision. The old config (CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000 + CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=75 => compact at ~150k) forced compaction far below the real ceiling; across compactions the brain kept re-grounding from lossy summaries + 'done'/'do-not-relitigate' artifacts and lost the actual task intent — root cause of the failed consultations prod-parity task. Opus 4.8 runs a native 1M window, so we now let the brain use it. DISABLE_AUTO_COMPACT=1 turns auto-compaction fully off (no early compaction; if a task ever exceeds 1M, run /compact manually). To re-enable early compaction, remove DISABLE_AUTO_COMPACT and restore: CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000, CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=75. Applies to every session launched in this folder; takes effect on NEXT launch, not mid-session. The PreCompact progress.md guard still fires on any manual /compact.",
+  "$comment": "The one harness gate. Stop hook -> checker.mjs: every time the agent tries to finish, the deterministic gate runs — red lint/typecheck/tests block on every tier; M/L additionally require tests-with-prod-change and a fresh review verdict; S is validated against its size caps. A green pass is cached by work-tree hash, so a retry with no edits passes instantly. Fail-CLOSED (crash => keep working), attempt-capped, then escalates via gate-escalation.md so a human looks instead of the run looping forever.",
+  "$envComment": "DISABLE_AUTO_COMPACT=1 turns auto-compaction fully off — Opus runs a native 1M window, so the brain uses it instead of compacting early (early compaction made the brain re-ground from lossy summaries and drift off the task). If a task ever approaches 1M, run /compact manually. To re-enable early auto-compaction, remove DISABLE_AUTO_COMPACT and set CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000 + CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=75 (=> compact at ~150k; on Opus BOTH are required). Env changes take effect on the NEXT launch, not mid-session.",
   "env": {
     "DISABLE_AUTO_COMPACT": "1"
   },
@@ -11,16 +11,6 @@
           {
             "type": "command",
             "command": "node \"${AI_DEV_AGENT_ROOT:-$CLAUDE_PROJECT_DIR}/scripts/checker.mjs\" --hook"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${AI_DEV_AGENT_ROOT:-$CLAUDE_PROJECT_DIR}/scripts/precompact-guard.mjs\""
           }
         ]
       }

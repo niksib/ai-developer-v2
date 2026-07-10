@@ -5,11 +5,11 @@
  *   - manual/CI use          (`node checker.mjs` → report + exit 0/1)
  *
  * It detects the stack, runs lint/typecheck/test/coverage/build (fail-fast) from
- * `stacks/<stack>/check-commands.json` (or the project's own `make check`),
+ * `knowledge/<stack>/check-commands.json` (or the project's own `make check`),
  * enforces the diff-aware "tests are mandatory" rule, and enforces the **review**
  * and **ui** verdicts by reading a machine-readable marker the subagents write
  * into their report artifacts. Resolves the agent root from its own location, so
- * it reads the same `stacks/*` config wherever it's invoked from.
+ * it reads the same `knowledge/<stack>/*` config wherever it's invoked from.
  *
  * Tier routing (the lifecycle skill's triage, validated here):
  *   The skill writes `tier: S|M|L` into progress.md. Missing/unknown = L
@@ -27,8 +27,14 @@
  * unchanged, re-runs pass instantly — a Stop-hook retry with no edits costs
  * nothing. Any file change changes the hash and invalidates the cache.
  *
- * Which repo(s) it gates: the cwd / CLAUDE_PROJECT_DIR, or `AI_DEV_GATE_REPO`
- * (comma-separated for multi-folder tasks). Each is gated independently.
+ * Where it looks vs. what it gates (these differ in the desktop app):
+ *   - SESSION_ROOT = CLAUDE_PROJECT_DIR (the folder Claude was opened in — the
+ *     AGENT folder in the desktop app). Task artifacts (progress.md, reports) and
+ *     gate state (green cache, attempt counter) live here; it is stable per session.
+ *   - REPOS = the project folder(s) actually gated. Resolved by precedence:
+ *     AI_DEV_GATE_REPO (env) → `gateRepos:` declared in progress.md → SESSION_ROOT.
+ *     Comma-separated / multi-folder; each is gated independently. The declaration
+ *     is what makes the gate hit the real project when CLAUDE_PROJECT_DIR isn't it.
  *
  * Hook contract (FAIL-CLOSED): the checker only ever exits 0 (genuine pass) or 2
  * (Claude must keep working). Any unexpected crash is caught and treated as a
@@ -46,9 +52,10 @@
  * a from-scratch one.
  *
  * Env knobs:
- *   AI_DEV_GATE_REPO          comma-separated repo(s) to gate (default cwd)
+ *   AI_DEV_GATE_REPO          comma-separated repo(s) to gate — overrides the
+ *                             `gateRepos:` declaration (default: gateRepos → SESSION_ROOT)
  *   AI_DEV_TASK_ARTIFACTS_DIR where progress/review/ui/escalation artifacts live
- *   AI_DEV_AGENT_ROOT         where stacks/* config lives
+ *   AI_DEV_AGENT_ROOT         where knowledge/<stack>/* config lives
  *   AI_DEV_GATE_STACK         force a stack (skip auto-detection)
  *   AI_DEV_CHECK_CMD          project check entrypoint (default: `make check` if
  *                             a Makefile `check:` target exists, else per-stack)
@@ -63,7 +70,7 @@
  *   GATE_BASE_REF             diff base (default origin/main → root commit)
  *   GATE_CMD_TIMEOUT_MS       per-command timeout (default 600000)
  */
-import { readFileSync, existsSync, writeFileSync, rmSync, mkdirSync, realpathSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, rmSync, mkdirSync, realpathSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
@@ -79,18 +86,34 @@ const S_MAX_FILES = Number(process.env.AI_DEV_TIER_S_MAX_FILES) || 2;
 const S_MAX_LINES = Number(process.env.AI_DEV_TIER_S_MAX_LINES) || 40;
 const CACHE_OFF = process.env.AI_DEV_GATE_CACHE === 'off';
 
-const REPOS = (process.env.AI_DEV_GATE_REPO ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd())
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-const ATTEMPTS_REPO = REPOS[0];
-const labelOf = (repo) => (REPOS.length > 1 ? `[${repo}] ` : '');
-
 const ONLY = process.env.GATE_ONLY ? process.env.GATE_ONLY.split(',').map((s) => s.trim()) : null;
 const keyEnabled = (key) => !ONLY || ONLY.includes(key);
 
-const ARTIFACTS_DIR = process.env.AI_DEV_TASK_ARTIFACTS_DIR
-  ?? join(ATTEMPTS_REPO ?? process.cwd(), '.agent-task');
+// SESSION_ROOT — where the Stop hook is rooted, where task artifacts and gate
+// state (green cache, attempt counter) live. This is CLAUDE_PROJECT_DIR: the
+// folder Claude was opened in, which in the desktop app is the AGENT folder,
+// NOT the project under test. It is stable across tasks, so the checker can
+// always find progress.md here without first knowing which project to gate.
+const SESSION_ROOT = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+
+const ARTIFACTS_DIR = resolveArtifactsDir(SESSION_ROOT, {
+  candidates: listTaskCandidates(join(SESSION_ROOT, '.agent-task')),
+});
+
+// REPOS — the project folder(s) the gate actually checks. Precedence:
+//   1. AI_DEV_GATE_REPO (env) — explicit override (terminal/CI).
+//   2. `gateRepos:` declared by the agent in progress.md — the desktop path:
+//      CLAUDE_PROJECT_DIR is the agent folder, so the agent names the project
+//      folder(s) it changed (absolute paths, comma-separated) to have them gated.
+//   3. SESSION_ROOT — fallback: self-dev on the agent, or a terminal launch
+//      rooted directly in the project.
+const REPOS = resolveGateRepos({
+  envRepos: process.env.AI_DEV_GATE_REPO,
+  declared: parseListField(safeReadText(join(ARTIFACTS_DIR, 'progress.md')), 'gateRepos'),
+  sessionRoot: SESSION_ROOT,
+});
+const PRIMARY_REPO = REPOS[0] ?? SESSION_ROOT;
+const labelOf = (repo) => (REPOS.length > 1 ? `[${repo}] ` : '');
 
 // ── pure helpers (exported for tests) ───────────────────────────────────────
 
@@ -140,6 +163,55 @@ export function withinTierS(prodFileCount, prodLineCount, caps = { maxFiles: S_M
   return prodFileCount <= caps.maxFiles && prodLineCount <= caps.maxLines;
 }
 
+/**
+ * Resolve the active task's artifacts dir. A task run keeps its artifacts in a
+ * per-task subfolder `./.agent-task/<slug>/`. There is one active task per
+ * session, and its `progress.md` is flushed continuously (the survival anchor),
+ * so the subfolder with the newest `progress.md` IS the current task — the hooks
+ * (separate processes with no session memory) pick it that way, no pointer file
+ * to maintain. Precedence:
+ *   1. AI_DEV_TASK_ARTIFACTS_DIR — explicit override (evals/CI), wins outright.
+ *   2. newest `./.agent-task/<slug>/` — the active task's folder.
+ *   3. `./.agent-task/` — back-compat / no per-task subfolder yet.
+ * `candidates` is `[{ name, mtimeMs }]` for the immediate subfolders (mtimeMs =
+ * that subfolder's `progress.md` mtime, else the dir's). Pure/exported for tests.
+ */
+export function resolveArtifactsDir(
+  repoRoot,
+  { envOverride = process.env.AI_DEV_TASK_ARTIFACTS_DIR, candidates = [] } = {},
+) {
+  if (envOverride) return envOverride;
+  const base = join(repoRoot, '.agent-task');
+  const active = candidates
+    .filter((c) => c && c.name)
+    .sort((a, b) => (b.mtimeMs ?? 0) - (a.mtimeMs ?? 0))[0];
+  return active ? join(base, active.name) : base;
+}
+
+/** Parse a comma-separated list field from an artifact — grabs the rest of the
+ *  line after `field:` and splits on commas (line-anchored, so `gateRepos:` must
+ *  start its line). Returns a trimmed, empty-free array. Exported for tests. */
+export function parseListField(text, field) {
+  const m = String(text ?? '').match(new RegExp(`^\\s*${field}:\\s*(.+)$`, 'im'));
+  if (!m) return [];
+  return m[1].split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+/**
+ * Resolve which project folder(s) the gate checks. Precedence:
+ *   1. AI_DEV_GATE_REPO (env, comma-separated) — explicit override.
+ *   2. `declared` — the `gateRepos:` list the agent wrote into progress.md.
+ *   3. `[sessionRoot]` — fallback (self-dev on the agent / terminal launch in-project).
+ * Pure/exported for tests.
+ */
+export function resolveGateRepos({ envRepos = process.env.AI_DEV_GATE_REPO, declared = [], sessionRoot } = {}) {
+  const fromEnv = String(envRepos ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (fromEnv.length) return fromEnv;
+  const fromDeclared = (declared ?? []).map((s) => String(s).trim()).filter(Boolean);
+  if (fromDeclared.length) return fromDeclared;
+  return sessionRoot ? [sessionRoot] : [];
+}
+
 // ── io helpers ──────────────────────────────────────────────────────────────
 
 function run(cmd, repo, opts = {}) {
@@ -162,6 +234,23 @@ function safeReadText(path) {
   try { return readFileSync(path, 'utf-8'); } catch { return null; }
 }
 
+/** Immediate task subfolders of `.agent-task/` with a freshness stamp: each
+ *  subfolder's `progress.md` mtime (the continuously-flushed survival anchor),
+ *  falling back to the dir's own mtime. Dotfiles are skipped. `[]` if none. */
+function listTaskCandidates(base) {
+  let entries;
+  try { entries = readdirSync(base, { withFileTypes: true }); } catch { return []; }
+  const out = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+    let mtimeMs = 0;
+    try { mtimeMs = statSync(join(base, entry.name, 'progress.md')).mtimeMs; }
+    catch { try { mtimeMs = statSync(join(base, entry.name)).mtimeMs; } catch { mtimeMs = 0; } }
+    out.push({ name: entry.name, mtimeMs });
+  }
+  return out;
+}
+
 // ── stack / diff resolution ─────────────────────────────────────────────────
 
 function detectStack(repo) {
@@ -177,7 +266,7 @@ function detectStack(repo) {
 }
 
 function loadStackConfig(stack) {
-  return safeReadJson(join(AGENT_ROOT, 'stacks', stack, 'check-commands.json'));
+  return safeReadJson(join(AGENT_ROOT, 'knowledge', stack, 'check-commands.json'));
 }
 
 /** A project that declares its own single check entrypoint owns the "what".
@@ -251,7 +340,7 @@ function workTreeHash(repo) {
 }
 
 function cachePath() {
-  return join(ATTEMPTS_REPO ?? process.cwd(), '.git', 'ai-dev-gate-cache.json');
+  return join(SESSION_ROOT, '.git', 'ai-dev-gate-cache.json');
 }
 
 /** The full gate configuration + tree state as one comparable key. */
@@ -261,6 +350,7 @@ function computeCacheKey(tier, uiScope) {
   if (trees.some((t) => !t)) return null;
   return [
     trees.join('+'),
+    `repos=${REPOS.join('+')}`, // cache lives at SESSION_ROOT, shared across projects → key by which repos were gated
     `tier=${tier}`,
     `ui=${uiScope ?? ''}`,
     `only=${ONLY ? ONLY.join('.') : ''}`,
@@ -280,7 +370,7 @@ function writeGreenCache(key) {
 // ── attempt cap / escalation ────────────────────────────────────────────────
 
 function attempts(delta) {
-  const file = join(ATTEMPTS_REPO ?? process.cwd(), '.git', 'ai-dev-gate-attempts');
+  const file = join(SESSION_ROOT, '.git', 'ai-dev-gate-attempts');
   let n = 0;
   try { n = parseInt(readFileSync(file, 'utf-8'), 10) || 0; } catch { /* none */ }
   if (delta === 'reset') { try { rmSync(file); } catch { /* none */ } return 0; }
@@ -292,7 +382,7 @@ function attempts(delta) {
 function writeEscalation(failures) {
   try {
     mkdirSync(ARTIFACTS_DIR, { recursive: true });
-    const head = run('git rev-parse HEAD', ATTEMPTS_REPO).stdout.trim() || '(unknown)';
+    const head = run('git rev-parse HEAD', PRIMARY_REPO).stdout.trim() || '(unknown)';
     const body = [
       '# Gate escalation',
       '',
@@ -335,12 +425,12 @@ function verdictGate(kind, reportName) {
   }
 
   // freshness: the verdict must cover the CURRENT production code.
-  if (run(`git cat-file -e ${marker.head}`, ATTEMPTS_REPO).code !== 0) {
+  if (run(`git cat-file -e ${marker.head}`, PRIMARY_REPO).code !== 0) {
     return [`${kind} gate: verdict references commit ${marker.head.slice(0, 8)} which is not in the repo — stale; re-run ${kind}.`];
   }
-  const stack = detectStack(ATTEMPTS_REPO);
+  const stack = detectStack(PRIMARY_REPO);
   const globs = stack ? loadStackConfig(stack)?.testGlobs : null;
-  const changedSince = changedFiles(ATTEMPTS_REPO, marker.head)
+  const changedSince = changedFiles(PRIMARY_REPO, marker.head)
     .filter((file) => (globs ? isProductionSource(file, globs) : true));
   if (changedSince.length > 0) {
     const short = marker.head.slice(0, 8);
@@ -371,7 +461,6 @@ function readProdReferenceHost(manualTestText) {
  * wording like "compare against old prod / inventory doc" that lets a static
  * inventory doc stand in for the real page. A report that never even mentions
  * the prod host is proof nobody looked at it.
- * Registered 2026-07-08 — see GATES.md.
  */
 function uiParityEvidenceGate(reportText, manualTestText) {
   if (!manualTestText) return [];
@@ -414,6 +503,11 @@ function gateArtifacts(anyProductionChanged, tier) {
 /** Gate a single repo. Returns { failures, prodChanged } (does not exit). */
 function gateRepo(repo, tier) {
   const out = [];
+  // A declared gate repo that does not exist is almost always a typo in
+  // `gateRepos:` — fail loudly instead of silently no-op'ing the whole gate.
+  if (!existsSync(repo)) {
+    return { failures: [`${labelOf(repo)}gate repo does not exist: ${repo}. Fix \`gateRepos:\` in progress.md (use absolute paths to the project folder(s)).`], prodChanged: false };
+  }
   const stack = detectStack(repo);
   if (!stack) {
     if (HOOK) console.error(`${labelOf(repo)}no recognised stack — gate is a NO-OP here (set AI_DEV_GATE_STACK to force a stack).`);

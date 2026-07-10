@@ -527,3 +527,35 @@ Never add `meta_title`, `meta_description`, `meta_keywords`, or any other SEO me
 ## Translations Tables — Content Columns Nullable
 
 Every content column in `_translations` tables (title, slug, name, body, description, etc.) must be `->nullable()` in migrations. Only `id`, `locale`, the foreign key, and timestamps are NOT NULL. Non-fallback locales may legitimately have no translation yet; NOT NULL causes insert failures when saving a record with only the fallback locale filled.
+
+## Database Standards
+
+- **Table names:** plural `snake_case` — `user_profiles`, `order_items`.
+- **Primary key:** `id` (auto-increment) unless the project specifies UUID.
+- **Foreign keys:** `{singular_table}_id` — `user_id`, `order_id`.
+- **Timestamps:** `created_at` + `updated_at` on every table.
+- **Soft deletes:** only when explicitly required — not by default.
+- **Indexes:** all foreign keys, all frequently-queried `WHERE` columns, all unique constraints.
+- **Migrations:** one logical change each; always implement `down()`; never modify an existing migration — create a new one.
+
+## Code Quality
+
+1. No magic numbers — extract to named constants or config.
+2. Early returns / guard clauses over deep nesting.
+3. Small methods — extract when one exceeds ~20 lines.
+4. Single Responsibility — one class, one reason to change.
+5. Typed properties + return types everywhere.
+6. Every cache call has a TTL — `Cache::forever()` only with a comment explaining why.
+7. No commented-out code — Git has history.
+8. No `dd`, `var_dump`, `dump` left in committed code.
+
+## Pre-commit Self-Review
+
+- [ ] No business logic in controllers, routes, models, views, or middlewares.
+- [ ] Mutations go through Actions — Services are read-only.
+- [ ] DTOs for all data passing between layers.
+- [ ] Domain exceptions thrown — never a generic `Exception` for business logic.
+- [ ] Every cache call has a TTL.
+- [ ] No short or cryptic variable/method names.
+- [ ] Commit follows Conventional Commits (see `knowledge/git/conventions.md`).
+- [ ] No debug statements (`dd`, `var_dump`, `dump`).

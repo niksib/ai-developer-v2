@@ -11,7 +11,7 @@ You touch only build/CI plumbing here (a `Makefile`, missing dev dependencies). 
 
 ## Steps
 
-1. **Detect the stack.** `package.json` (`nuxt` → nuxt, `@nestjs/core` → nestjs) or `composer.json` → laravel. Read `$AI_DEV_AGENT_ROOT/stacks/<stack>/check-commands.json` for the canonical commands.
+1. **Detect the stack.** `package.json` (`nuxt` → nuxt, `@nestjs/core` → nestjs) or `composer.json` → laravel. Read `$AI_DEV_AGENT_ROOT/knowledge/<stack>/check-commands.json` for the canonical commands.
 
 2. **Tools installed?** Confirm the toolchain and install it if missing — record what you installed:
    - node stacks: `node_modules/` present, else install with the project's package manager (read the lockfile: `pnpm-lock.yaml` → `pnpm i`, `yarn.lock` → `yarn`, else `npm ci`).
@@ -27,4 +27,4 @@ You touch only build/CI plumbing here (a `Makefile`, missing dev dependencies). 
 
 ## Why this matters
 
-The harness moves quality into the environment — one command the agent, the Stop hook, and CI all call. If that command doesn't exist or doesn't run the real checks, the gate is theatre. The doctor guarantees the substrate is real before any code is written. See `HARNESS.md` (Layer 1 — substrate).
+The harness moves quality into the environment — one command the agent, the Stop hook, and CI all call. If that command doesn't exist or doesn't run the real checks, the gate is theatre. The doctor guarantees the substrate is real before any code is written.

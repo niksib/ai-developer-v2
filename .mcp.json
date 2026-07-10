@@ -2,8 +2,8 @@
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest", "--headless", "--isolated", "--output-dir", ".playwright-mcp"],
-      "description": "Headless browser driver for UI verification. Lets the agent navigate/click/fill/screenshot the running app to verify it works. Only use these tools when verifying UI scenarios. Requires Chromium installed in the runtime (npx playwright install chromium, one-time host setup)."
+      "args": ["-y", "@playwright/mcp@latest", "--headless", "--isolated", "--output-dir", ".agent-task/.playwright-mcp"],
+      "description": "Headless browser driver for UI verification. Lets the agent navigate/click/fill/screenshot the running app to verify it works. Screenshots land under .agent-task/.playwright-mcp (inside the gitignored working dir — never the target-repo root); the ui-verify/ui-verifier step collects them into the active task's screenshots/ folder. Only use these tools when verifying UI scenarios. Requires Chromium installed in the runtime (npx playwright install chromium, one-time host setup)."
     },
     "basic-memory": {
       "command": "uvx",

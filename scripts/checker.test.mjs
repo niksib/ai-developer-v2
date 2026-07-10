@@ -8,7 +8,8 @@
 import assert from 'node:assert/strict';
 import {
   globToRegExp, matchesAny, isProductionSource, parseVerdictMarker,
-  parseArtifactField, normaliseTier, withinTierS,
+  parseArtifactField, normaliseTier, withinTierS, resolveArtifactsDir,
+  parseListField, resolveGateRepos,
 } from './checker.mjs';
 
 let passed = 0;
@@ -86,6 +87,69 @@ test('withinTierS enforces both caps', () => {
   assert.ok(withinTierS(2, 40, caps));   // at the caps is still S
   assert.ok(!withinTierS(3, 10, caps));  // too many files
   assert.ok(!withinTierS(1, 41, caps));  // too many lines
+});
+
+test('resolveArtifactsDir: env override wins outright', () => {
+  assert.equal(
+    resolveArtifactsDir('/repo', { envOverride: '/tmp/custom', candidates: [{ name: 'task-1', mtimeMs: 9 }] }),
+    '/tmp/custom',
+  );
+});
+
+test('resolveArtifactsDir: picks the newest task subfolder', () => {
+  assert.equal(
+    resolveArtifactsDir('/repo', {
+      envOverride: undefined,
+      candidates: [
+        { name: 'old-task', mtimeMs: 100 },
+        { name: 'current-task', mtimeMs: 999 },
+        { name: 'mid-task', mtimeMs: 500 },
+      ],
+    }),
+    '/repo/.agent-task/current-task',
+  );
+});
+
+test('resolveArtifactsDir: no subfolders falls back to .agent-task', () => {
+  assert.equal(resolveArtifactsDir('/repo', { envOverride: undefined, candidates: [] }), '/repo/.agent-task');
+});
+
+test('resolveArtifactsDir: ignores nameless/garbage candidates', () => {
+  assert.equal(
+    resolveArtifactsDir('/repo', { envOverride: undefined, candidates: [null, { mtimeMs: 5 }, { name: 't', mtimeMs: 1 }] }),
+    '/repo/.agent-task/t',
+  );
+});
+
+test('parseListField: splits a comma list, tolerates spaces, [] when absent', () => {
+  assert.deepEqual(parseListField('gateRepos: /a/fe,/a/be\n', 'gateRepos'), ['/a/fe', '/a/be']);
+  assert.deepEqual(parseListField('  gateRepos:  /a/fe ,  /a/be \n', 'gateRepos'), ['/a/fe', '/a/be']);
+  assert.deepEqual(parseListField('gateRepos: /only\n', 'gateRepos'), ['/only']);
+  assert.deepEqual(parseListField('tier: M\n', 'gateRepos'), []);
+  assert.deepEqual(parseListField(null, 'gateRepos'), []);
+});
+
+test('parseListField is line-anchored (prose "my gateRepos: x" never matches)', () => {
+  assert.deepEqual(parseListField('note: my gateRepos: nope\n', 'gateRepos'), []);
+});
+
+test('resolveGateRepos: env override wins outright', () => {
+  assert.deepEqual(
+    resolveGateRepos({ envRepos: '/env/a,/env/b', declared: ['/decl'], sessionRoot: '/s' }),
+    ['/env/a', '/env/b'],
+  );
+});
+
+test('resolveGateRepos: declared gateRepos used when no env', () => {
+  assert.deepEqual(
+    resolveGateRepos({ envRepos: undefined, declared: ['/proj/fe', '/proj/be'], sessionRoot: '/agent' }),
+    ['/proj/fe', '/proj/be'],
+  );
+});
+
+test('resolveGateRepos: falls back to sessionRoot when nothing declared', () => {
+  assert.deepEqual(resolveGateRepos({ envRepos: undefined, declared: [], sessionRoot: '/agent' }), ['/agent']);
+  assert.deepEqual(resolveGateRepos({ envRepos: '', declared: [], sessionRoot: '/agent' }), ['/agent']);
 });
 
 console.log(`checker.test: ${passed} passed`);

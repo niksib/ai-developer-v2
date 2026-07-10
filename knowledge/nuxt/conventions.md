@@ -521,3 +521,24 @@ Multiple tasks may run `ui_verification` concurrently in separate worktrees. To 
 | Shared UI folder     | `kebab-case`   | `shared/ui/`, `shared/lib/`, `shared/api/`   |
 | Public API file      | `index.ts`     | every slice has `index.ts` — only this is imported from outside |
 | Internal folders     | fixed names    | `ui/`, `model/`, `api/` inside every slice   |
+
+## Code Quality
+
+1. No magic numbers — extract to named constants or config.
+2. Early returns / guard clauses over deep nesting.
+3. Small functions/composables — extract when one grows too large.
+4. Single Responsibility — one component, one job.
+5. Typed everything — interfaces for all shapes, no `any`, `readonly` refs from composables.
+6. No commented-out code — Git has history.
+7. No `console.log` left in committed code.
+
+## Pre-commit Self-Review
+
+- [ ] FSD layering respected — imports go downward only, no same-layer cross-imports.
+- [ ] Each slice exposes its public API via `index.ts`; no deep imports into another slice.
+- [ ] No business logic or direct API calls in `pages/` — they route only.
+- [ ] TypeScript strict — no `any`, interfaces defined for all shapes.
+- [ ] Components are single-responsibility.
+- [ ] No short or cryptic names.
+- [ ] Commit follows Conventional Commits (see `knowledge/git/conventions.md`).
+- [ ] No `console.log` left behind.

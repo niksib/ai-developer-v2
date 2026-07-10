@@ -34,11 +34,11 @@ This is what keeps revision loops cheap: the full-diff review happens once; each
 ## Your task
 
 1. Review the diff you were given (`git diff <base>..HEAD`, or run `git diff HEAD` if none was provided) to see all changes
-2. Detect the stack from the diff, then read the relevant rules:
-   - Laravel/PHP → [stacks/laravel/conventions.md](../../stacks/laravel/conventions.md) (+ [testing.md](../../stacks/laravel/testing.md))
-   - NestJS/Node.js → [stacks/nestjs/conventions.md](../../stacks/nestjs/conventions.md)
-   - Frontend (Vue/Nuxt) → [stacks/nuxt/conventions.md](../../stacks/nuxt/conventions.md)
-   - Always read → [knowledge/conventions.md](../../knowledge/conventions.md) and [knowledge/architecture.md](../../knowledge/architecture.md)
+2. Detect the stack from the diff, then read the relevant rules — that stack's `architecture.md` + `conventions.md`:
+   - Laravel/PHP → [knowledge/laravel/architecture.md](../../knowledge/laravel/architecture.md), [conventions.md](../../knowledge/laravel/conventions.md) (+ [testing.md](../../knowledge/laravel/testing.md))
+   - NestJS/Node.js → [knowledge/nestjs/architecture.md](../../knowledge/nestjs/architecture.md), [conventions.md](../../knowledge/nestjs/conventions.md)
+   - Frontend (Vue/Nuxt) → [knowledge/nuxt/architecture.md](../../knowledge/nuxt/architecture.md), [conventions.md](../../knowledge/nuxt/conventions.md)
+   - Always read → [knowledge/git/conventions.md](../../knowledge/git/conventions.md)
 3. Review every changed file against those rules
 4. Write `review-report.md` with the verdict marker (see "Write your report"), then return the short summary
 
@@ -119,7 +119,7 @@ If there are zero findings overall, return: `✅ No violations found. Ready to c
 
 You have `Write` for ONE purpose: your own report. **Never edit, create, or delete any other file** — least of all the code under review.
 
-Write the full findings (the format above) to `review-report.md` in the task artifacts dir (`$AI_DEV_TASK_ARTIFACTS_DIR`, else `./.agent-task/`). **End the file with the machine-readable verdict marker** the quality gate reads — emit it as the very last thing you do:
+Write the full findings (the format above) to `review-report.md` in the task artifacts dir the orchestrator gives you (resolve it yourself if not given: `$AI_DEV_TASK_ARTIFACTS_DIR`, else the newest `./.agent-task/<slug>/` subfolder, else `./.agent-task/`) — this must be the same dir the checker reads, or the gate won't find your verdict. **End the file with the machine-readable verdict marker** the quality gate reads — emit it as the very last thing you do:
 
 ```
 <!-- GATE: review verdict=PASS head=<sha> -->

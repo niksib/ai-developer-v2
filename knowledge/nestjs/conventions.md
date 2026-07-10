@@ -3,7 +3,7 @@
 ## Core Rule
 **Zero business logic in Controllers, Guards, Interceptors, or Entities.**
 Mutations go through Actions. Queries go through Services. Data access in Repositories. Data shapes are DTOs.
-Mirrors the Laravel DDD approach — see [stacks/laravel/conventions.md](../laravel/conventions.md) for the philosophy.
+Mirrors the Laravel DDD approach — see [knowledge/laravel/conventions.md](../laravel/conventions.md) for the philosophy.
 
 ### Actions vs Services — the rule
 
@@ -674,3 +674,33 @@ await dataSource.query('TRUNCATE TABLE users RESTART IDENTITY CASCADE');
 **Domain data:** create all test fixtures via TypeORM factories or the project's factory helpers. Never rely on demo seeders — those are for development databases only.
 
 **Seeders (reference data only):** if the project has lookup/reference seeders (e.g. roles, countries), run them inside `globalSetup` after migrations, before the suite starts.
+
+## Database Standards
+
+- **Table names:** plural `snake_case`; **PK:** `id` (auto-increment) unless UUID specified; **FK:** `{singular_table}_id`.
+- **Timestamps:** `created_at` + `updated_at` on every table. **Soft deletes:** only when explicitly required.
+- **Indexes:** all foreign keys, frequently-queried `WHERE` columns, unique constraints.
+- **Migrations:** one logical change each; reversible; never edit an existing migration — create a new one.
+
+## Code Quality
+
+1. No magic numbers — extract to named constants or config.
+2. Early returns / guard clauses over deep nesting.
+3. Small methods — extract when one exceeds ~20 lines.
+4. Single Responsibility — one class, one reason to change.
+5. Typed everything — interfaces/DTOs, no `any`, explicit return types.
+6. Every cache call has a TTL — never cache without an expiry unless the data is genuinely static (with a comment).
+7. No commented-out code — Git has history.
+8. No `console.log` left in committed code.
+
+## Pre-commit Self-Review
+
+- [ ] No business logic in controllers or entities.
+- [ ] Mutations go through Actions — Services are read-only.
+- [ ] DTOs for all data passing between layers; validation on every DTO.
+- [ ] Domain exceptions thrown — never a generic `Error`/`Exception` for business logic.
+- [ ] Every cache call has a TTL.
+- [ ] TypeScript strict — no `any`, interfaces for all shapes.
+- [ ] No short or cryptic names.
+- [ ] Commit follows Conventional Commits (see `knowledge/git/conventions.md`).
+- [ ] No `console.log` left behind.

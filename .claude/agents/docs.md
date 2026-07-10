@@ -1,6 +1,6 @@
 ---
 name: docs
-description: Writes the project documentation for the `documentation` phase from the shipped change. Delegate here so the doc prose is generated in a fresh, small context — the orchestrator hands it the spec + diff and gets back a short summary, never the whole transcript.
+description: Writes the project documentation from a shipped change, on request. Invoked by the `/docs` skill (documentation is an on-request step, not a standard lifecycle phase). Delegate here so the doc prose is generated in a fresh, small context — the caller hands it the spec + diff and gets back a short summary, never the whole transcript.
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: haiku
 ---
